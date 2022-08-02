@@ -1,0 +1,66 @@
+#All imports needed
+import numpy as np 
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+import matplotlib.pyplot as plt
+from sklearn import preprocessing
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+#load from files
+from google.colab import files
+uploaded = files.upload()
+
+trainData = pd.read_csv("train.csv")
+testData = pd.read_csv("test.csv")
+#read the csv into dataframe
+
+#Function to clean the data. I got help from Kaggle
+def clean(Data):
+    le = preprocessing.LabelEncoder()
+    Data['Age'] = Data.groupby(['Pclass','Sex'])['Age'].transform(lambda x: x.fillna(x.median()))
+    Data['Embarked'].replace({'S':0, 'C':1, 'Q':2}, inplace=True)
+    #not needed columns in the data
+    Data.drop(['Cabin','Name','Ticket'], axis=1, inplace=True)
+    Data['Sex'].replace({'male':0, 'female':1}, inplace=True)
+    Data['Fare'] = Data.groupby(['Pclass','Sex'])['Fare'].transform(lambda x: x.fillna(x.median()))
+    Data.dropna(axis=0, subset=['Embarked'], inplace=True)
+    return Data
+    
+    cleanTrain = clean(trainData) #clean the traindata
+cleanTest = clean(testData)#clean the testData
+cleanTrain
+cleanTest
+
+#Split the data for training and testing 
+X_train, X_test, y_train, y_test = train_test_split(pd.get_dummies(cleanTrain.drop('Survived', axis=1)),cleanTrain['Survived'], test_size=0.25, random_state = 5)
+
+#correlation for a few variables i think really contribute
+age = cleanTrain["Age"]
+survive = cleanTrain["Survived"]
+corr = age.corr(survive)
+print("Correlation of age and survived is: ", corr)
+is3 =  cleanTrain['Pclass']==3
+is2 = cleanTrain['Pclass'] == 2
+is1 = cleanTrain['Pclass'] == 1
+correl3 = is3.corr(survive)
+correl2 = is2.corr(survive)
+correl1 = is1.corr(survive)
+print("Correlation of class 1 and survived is: ", correl1)
+print("Correlation of class 2 and survived is: ", correl2)
+print("Correlation of class 3 and survived is: ", correl3)
+
+model = LogisticRegression(solver = 'liblinear') #create the logistic regression model
+#fit the model
+model.fit(X_train, y_train)
+#predict based off of our model
+modpredict = model.predict(X_test)
+#get the accuracy
+accuracy = accuracy_score(y_test, modpredict)
+print("The accuracy score of the model is ", accuracy)
+
+predictsub = model.predict(pd.get_dummies(cleanTest))
+
+output = pd.DataFrame({'PassengerId': cleanTest.PassengerId, 'Survived': predictsub})
+output.to_csv('my_submission.csv', index=False)
