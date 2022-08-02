@@ -1,0 +1,100 @@
+# Import libraries
+
+import numpy as np 
+import pandas as pd
+import itertools
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+from sklearn import preprocessing
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout
+
+from google.colab import files
+uploaded = files.upload()
+
+# Get Datasets
+trainData = pd.read_csv("train.csv")
+testData = pd.read_csv("test.csv")
+
+trainData.head()
+
+testData.head()
+
+# See what data is missing
+pd.set_option('display.max_rows',None)
+trainData.isna().sum().sort_values(ascending=False)
+
+# Drop unneeded categorical data
+trainData = trainData.select_dtypes(exclude=['object'])
+testData = testData.select_dtypes(exclude=['object'])
+
+# Save ID column of test data to be used later for exporting the predictions
+testID = testData.Id
+
+# Drop ID column, not needed for preprocessing
+trainData=trainData.drop(columns="Id")
+testData=testData.drop(columns="Id")
+
+# Fill NaN with 0
+testData.fillna(0,inplace=True)
+trainData.fillna(0,inplace=True)
+
+trainMatrix = np.matrix(trainData)
+testMatrix  = np.matrix(testData)
+
+yTrainScaler = MinMaxScaler()
+yTrainScaler.fit(np.array(trainData.SalePrice).reshape((trainData.shape[0],1)))
+
+XTrainScaler = MinMaxScaler()
+XTrainScaler.fit(trainMatrix)
+
+testScaler = MinMaxScaler()
+testScaler.fit(np.matrix(trainData.drop('SalePrice',axis = 1)))
+
+trainData = pd.DataFrame(XTrainScaler.transform(trainMatrix),columns = list(trainData.columns))
+testData = pd.DataFrame(testScaler.transform(testMatrix),columns = list(trainData.columns).remove('SalePrice'))
+
+# Set up y value for fitting purposes
+yTrainData = trainData["SalePrice"]
+xTrainData = trainData.drop(columns="SalePrice")
+
+# Split the training data for Training set and a Validation set
+X_train, X_val, y_train, y_val = train_test_split(xTrainData, yTrainData, test_size=0.2, random_state=42)
+
+# Convert series to DataFrame
+y_train = pd.DataFrame(y_train)
+
+# Merge X_train and y_train to be used in neural network
+trainSet = pd.DataFrame(X_train).merge(y_train, left_index = True, right_index = True)
+
+# Neural network
+
+model = Sequential()
+model.add(Dense(200, input_shape=(X_train.shape[1],), activation='relu'))
+model.add(Dropout(0.5))  # Prevent over-fitting
+model.add(Dense(100, activation='relu'))  # Hidden layer
+model.add(Dropout(0.5))  # Prevent over-fitting
+model.add(Dense(50, activation='relu'))  # Hidden layer
+model.add(Dropout(0.5))  # Prevent over-fitting
+model.add(Dense(25, activation='relu'))  # Hidden layer
+model.add(Dropout(0.5))  # Prevent over-fitting
+model.add(Dense(10, activation='relu'))  # Hidden layer
+model.add(Dropout(0.5))  # Prevent over-fitting
+model.add(Dense(1, activation='sigmoid'))
+
+model.compile(optimizer='adam', loss='mean_squared_logarithmic_error')
+
+model.fit(np.array(X_train), np.array(trainSet['SalePrice'].values), epochs=100, batch_size=100, verbose=1)
+
+# Make predictions on the test data
+y_predict = model.predict(np.array(testData))
+predictions = list(itertools.islice(y_predict, testData.shape[0]))
+predictions = pd.DataFrame(yTrainScaler.inverse_transform(np.array(predictions).reshape(len(predictions),1)), columns = ['SalePrice'])
+testID = pd.DataFrame(testID)
+predictions = testID.join(predictions)
+
+# Export to CSV
+predictions.to_csv('NeuralNetworkSubmission.csv', index=False)
