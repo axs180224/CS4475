@@ -1,0 +1,117 @@
+#%% libraries
+import cv2 as cv
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+from sklearn.cluster import KMeans
+from sklearn.metrics import mean_squared_error as MSE
+from matplotlib.pyplot import axis
+
+imgDancer = cv.imread("drive/MyDrive/Dancer.jpeg")
+imgModel = cv.imread('drive/MyDrive/Model.jpg')
+imgSquare = cv.imread('drive/MyDrive/Square.jpeg')
+
+
+print(imgDancer)
+
+#%% plot the images
+plt.figure(num=None, figsize=(8, 8), dpi=80, facecolor='w', edgecolor='k')
+imgDancer = cv.cvtColor(imgDancer, cv.COLOR_BGR2RGB) # convert BGR to RGB
+plt.imshow(imgDancer)
+plt.show()
+#Dancer
+plt.figure(num=None, figsize=(8, 8), dpi=80, facecolor='w', edgecolor='k')
+imgModel = cv.cvtColor(imgModel, cv.COLOR_BGR2RGB) # convert BGR to RGB
+plt.imshow(imgModel)
+plt.show()
+#Model
+plt.figure(num=None, figsize=(8, 8), dpi=80, facecolor='w', edgecolor='k')
+imgSquare = cv.cvtColor(imgSquare, cv.COLOR_BGR2RGB) # convert BGR to RGB
+plt.imshow(imgSquare)
+plt.show()
+
+#%% Plot 3D of RBG images
+#Dancer
+R_Dancer = imgDancer[:,:,0].flatten()
+G_Dancer = imgDancer[:,:,1].flatten()
+B_Dancer = imgDancer[:,:,2].flatten()
+plt.figure(num=None, figsize=(8, 8), dpi=80, facecolor='w', edgecolor = 'k')
+ax = plt.axes(projection='3d')
+Dancer_3d = ax.scatter3D(R_Dancer, G_Dancer, B_Dancer, c = B_Dancer, cmap = 'viridis', s=0.1)
+ax.view_init(10, 80)
+ax.set_xlabel('red')
+ax.set_ylabel('green')
+ax.set_zlabel('blue')
+#Model
+R_Model = imgModel[:,:,0].flatten()
+G_Model = imgModel[:,:,1].flatten()
+B_Model = imgModel[:,:,2].flatten()
+plt.figure(num=None, figsize=(8, 8), dpi=80, facecolor='w', edgecolor = 'k')
+ax = plt.axes(projection='3d')
+Model_3d = ax.scatter3D(R_Model, G_Model, B_Model, c = B_Model, cmap = 'viridis', s=0.1)
+ax.view_init(10, 80)
+ax.set_xlabel('red')
+ax.set_ylabel('green')
+ax.set_zlabel('blue')
+#Square
+R_Square = imgSquare[:,:,0].flatten()
+G_Square = imgSquare[:,:,1].flatten()
+B_Square = imgSquare[:,:,2].flatten()
+plt.figure(num=None, figsize=(8, 8), dpi=80, facecolor='w', edgecolor = 'k')
+ax = plt.axes(projection='3d')
+Square_3D = ax.scatter3D(R_Square, G_Square, B_Square, c = B_Square, cmap = 'viridis', s=0.1)
+ax.view_init(10, 80)
+ax.set_xlabel('red')
+ax.set_ylabel('green')
+ax.set_zlabel('blue')
+
+#%% Change each picture to 2d array
+#Dancer
+pixel_values_Dancer = np.float32(imgDancer.reshape((-1, 3)))
+#Model
+pixel_values_Model = np.float32(imgModel.reshape((-1, 3)))
+#Square
+pixel_values_Square = np.float32(imgSquare.reshape((-1, 3)))
+#Where to end for each img
+endAt = (cv.TermCriteria_EPS + cv.TermCriteria_MAX_ITER,1,1)
+
+#%% Various Dancer KValue images
+#create array with the specified kValues
+kmeanVal = [2,3,5,10,20] 
+#for loop to go create each image with the specific k clusters
+for k in kmeanVal:
+  _, labels, (centers) = cv.kmeans(pixel_values_Dancer, k, None,(cv.TermCriteria_EPS + cv.TermCriteria_MAX_ITER,1,1), 50, cv.KMEANS_PP_CENTERS)
+  centers = np.uint32(centers) # convert to 32 bit values
+  #change surrounding pixel colors to closest cluster color and flatten the labels and bring back 
+  kMeansDancer = centers[labels.flatten()].reshape(imgDancer.shape)
+  plt.title(k)
+#Display each image after being constructed with k clusters
+  plt.imshow(kMeansDancer)
+  axis('off')
+  plt.show()
+  
+  #%% Various KValue Model Images
+for k in kmeanVal:
+  _, labels, (centers) = cv.kmeans(pixel_values_Model, k, None, (cv.TermCriteria_EPS + cv.TermCriteria_MAX_ITER,1,1), 50, cv.KMEANS_PP_CENTERS)
+  # convert to 32 bit values
+  centers = np.uint32(centers)
+  #change surrounding pixel colors to closest cluster color and flatten the labels and bring back 
+  kMeansModel = centers[labels.flatten()].reshape(imgModel.shape)
+  #Display the number of clusters
+  plt.title(k)
+#Display each image after being constructed with k clusters
+  plt.imshow(kMeansModel)
+  axis('off')
+  plt.show()
+  
+  #@title
+#Square kmeans images
+for k in kmeanVal:
+  _, labels, (centers) = cv.kmeans(pixel_values_Square, k, None,(cv.TermCriteria_EPS + cv.TermCriteria_MAX_ITER,1,1), 50, cv.KMEANS_PP_CENTERS)
+  centers = np.uint32(centers)
+  kMeansSquare = centers[labels.flatten()].reshape(imgSquare.shape)
+  plt.title(k)
+  plt.imshow(kMeansSquare)
+  axis('off')
+  plt.show()
+  
