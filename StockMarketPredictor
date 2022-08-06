@@ -1,0 +1,116 @@
+---
+title: "STATS_4360MP1"
+author: "Anand Saravanan"
+date: "9/11/2021"
+output: pdf_document
+---
+
+## Section 1
+#Problem 1
+
+a) The KNN model has been fit for the various k-values below. Refer to section 2 for the code showing such fitting. 
+
+b) In section 2 we see the plot against the error rates for the training and test sets, against the various k values. We did this so we can see which k value would be the best for this scenario. By looking at this plot labeled "Error rates against various k-values" we notice that at the beginning the training and testing error start on on opposite sides of the y-axis. As the k-values increase both measures of errors start to "merge" or come closer to one another. This is congruous with what we learned in class as the u-shaped could also be in the shape of a log curve which is what is shown in the graph titled "Error rates against various k-values".
+
+c) looking at this plot labeled "Error rates against various k-values" we can see that the point at which the training and test error merge is approximately at the k-value of 131. At this desired k-value the training error is .1185 and the test error is .116. This data was derived in the data frame shown below. 
+
+d) By looking at the graph with the title, "Decision Boundary", we can see a visual representation of where the decision boundary lays. This is where the categorical value should change from one to another. It does make sense as to where the decision boundary has been placed as you can see as it has split the data fairly well, but also not perfectly therefore not overfilling the training data. 
+
+#Problem 2
+
+a) We know that MSE is the mean squared error. To calculate this we can compute the Expected f value of f hat - f, and square that. 
+Bias(fhat(x)) = E(fhat(x0)) - f(x0)
+E(fhat^2^) + E(f^2^) - 2fE(fhat)
+From here we can conduce that the last part of the equation shown above is equal to the Bias and the first part is equal to the variance. 
+
+b) E(yhat0 - y0)^2^ = MSE(fhat(x0)) + sigma^2^
+In problem 2a we proved that MSE = (Bias(fhat(x0)))^2^ + var(fhat(x0))
+Therefore by just substituting in what we already know for MSE we can prove that E(yhat0 - y0)^2^ = MSE(fhat(x0)) + sigma^2^.
+
+## Section 2
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+#import the necessary packages
+library(readr)
+library(ISLR)
+library(class)
+library(stats)
+library(dplyr)
+```
+
+
+```{r cars}
+#read in the csv files
+Strain <- read_csv("1-training_data.csv")
+Stest <- read.csv("1-test_data.csv")
+#set the various train and test x & y data frames 
+train.X <- cbind(Strain$x.1, Strain$x.2)
+train.Y <- Strain$y
+test.X <- cbind(Stest$x.1, Stest$x.2)
+test.Y <- Stest$y
+```
+
+
+```{r}
+#This block of code tests the training and test error rates at the various k-values. 
+ks <- c(seq(1, 200, by = 5)) #set ks to the various k-values provided. 
+nks <- length(ks) 
+err.rate.train <- numeric(length = nks)
+err.rate.test <- numeric(length = nks)
+names(err.rate.train) <- names(err.rate.test) <- ks
+ #for loop to go through each provided k-value and compute the training and test error 
+for (i in seq(along = ks)) {
+  set.seed(1)
+  mod.train <- knn(train.X, train.X, train.Y, k = ks[i])
+  set.seed(1)
+  mod.test <- knn(train.X, test.X, train.Y, k = ks[i])
+  err.rate.train[i] <- mean(mod.train != train.Y)
+  err.rate.test[i] <- mean(mod.test != test.Y)
+}
+```
+
+```{r}
+#code block that provides the plot of the error rates against the various k-values. 
+
+plot(ks, err.rate.train,main = "Error rates against various K-values", xlab = "Number of nearest neighbors", ylab = "Error rate", type = "b", ylim = range(c(err.rate.train, err.rate.test)), col = "blue", pch = 20)
+lines(ks, err.rate.test, type="b", col="red", pch = 20)
+legend("bottomright", lty = 1, col = c("blue", "red"), legend = c("training", "test"))
+```
+```{r, echo=FALSE}
+# code block to determine the optimal k-value. 
+result <- data.frame(ks, err.rate.train, err.rate.test)
+result[err.rate.test == min(result$err.rate.test), ]
+```
+
+```{r}
+#Set dimensions for the grid
+n.grid <- 50
+x1.grid <- seq(f = min(train.X[, 1]), t = max(train.X[, 1]), l = n.grid)
+x2.grid <- seq(f = min(train.X[, 2]), t = max(train.X[, 2]), l = n.grid)
+grid <- expand.grid(x1.grid, x2.grid)
+```
+
+
+
+```{r}
+k.opt <- 70
+set.seed(1)
+mod.opt <- knn(train.X, grid, train.Y, k = k.opt, prob = T)
+prob <- attr(mod.opt, "prob") # prob is voting fraction for winning class
+prob <- ifelse(mod.opt == "yes", prob, 1 - prob) # now it is voting fraction for Direction == "Up"
+prob <- matrix(prob, n.grid, n.grid)
+
+```
+
+
+```{r}
+#code block to provide the plot for thr decision boundry
+plot(train.X, main = "Decision Boundary", col = ifelse(train.Y == "yes", "green", "red"))
+contour(x1.grid, x2.grid, prob, levels = 0.5, labels = "", xlab = "", ylab = "", main = "", add = T)
+```
+
+
