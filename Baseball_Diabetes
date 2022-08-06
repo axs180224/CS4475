@@ -1,0 +1,142 @@
+---
+title: "MP6"
+author: "Anand Saravanan"
+date: "12/7/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Section 2
+
+```{r}
+#load all libraries
+library(tree)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(ISLR)
+library(caret)
+library(e1071)
+library(randomForest)
+library(gbm)
+```
+
+```{r}
+#load dataset removing empty values
+hitData <- na.omit(Hitters) 
+head(hitData)
+```
+##1
+#a
+```{r}
+#log the Salary variable for skewness
+hitData$Salary <- log(hitData$Salary)
+#create the regression tree
+tree.hitData <- tree(Salary ~., data = hitData)
+summary(tree.hitData)
+#plot the tree
+plot(tree.hitData)
+text(tree.hitData, pretty = 0, cex = 0.7)
+
+
+```
+#b
+```{r}
+
+#prune tree
+pruneHit <- cv.tree(tree.hitData,K= nrow(hitData), FUN = prune.tree)
+
+pruneHit$size[which.min(pruneHit$dev)]
+prunehitTree <- prune.tree(tree.hitData, best = 8)
+#RSME
+yhat = predict(tree.hitData, newdata = hitData)
+print(mean((yhat-hitData$Salary)^2))
+#plot 
+plot(prunehitTree)
+text(prunehitTree, pretty = 0, cex = 0.7)
+```
+#c
+```{r}
+
+baggingHit <- randomForest(Salary ~ ., data = hitData, mtry = 13, ntree = 1000, importance = TRUE)
+trainctrl <- trainControl(method = 'LOOCV')
+
+baggingTrain <- train(Salary~., data = hitData, method = 'treebag', trControl = trainctrl)
+
+varImpPlot(baggingHit)
+mseBag <- (baggingTrain$results$RMSE)^2
+mseBag
+```
+#d
+```{r}
+
+randomForestHit <- randomForest(Salary ~ ., data = hitData, mtry = 3, trControl = trainctrl,
+ntree = 1000, importance = TRUE)
+randomForestHit
+varImpPlot(randomForestHit)
+
+```
+#e
+```{r, echo = FALSE}
+
+#boosting method
+hitDataBoost <- gbm(Salary ~ ., data = hitData, distribution = "gaussian",
+n.trees = 1000, interaction.depth = 4, shrinkage =0.01, verbose = F)
+#train
+hitDataBoostTrain <- train(Salary~., data = hitData, method = 'gbm', trControl = trainctrl)
+#summary
+summary(hitDataBoost)
+boostmse <- mean((hitDataBoostTrain$results$RMSE)^2)
+boostmse
+
+```
+
+##2
+
+
+```{r}
+#read data
+diabetes = read.csv("Documents/diabetes.csv")
+names(diabetes)=c("Pregnancies", "Glucose", "BloodPressure", "SkinThickness", "Insulin", "BMI", "DiabetesPedigreeFunction", "Age","Outcome") #Renaming
+```
+
+#a
+```{r}
+set.seed(1)
+svmLinear = tune(svm, Outcome ~ ., data = diabetes, kernel = "linear", ranges = list(cost = c( 0.01, 0.1, 1,10,100)))
+svmBest = svmLinear$best.model
+#predict the class labels of these test observations
+table(predicted = predict(svmBest, diabetes), true = diabetes$Outcome)
+summary(svmLinear)
+summary(svmBest)
+```
+
+#b
+```{r, echo = FALSE}
+set.seed(1)
+svmPoly = tune(svm, Outcome ~ ., data = diabetes, kernel = "polynomial", degree = 2, ranges = list(cost = c(0.01, 0.1, 1,10,100)))
+
+#finding best model
+svmBestPoly = svmPoly$best.model
+
+table(predicted = predict(svmBestPoly, diabetes), true = diabetes$Outcome)
+#test error rate is 0.2265612
+summary(svmPoly)
+summary(svmBestPoly)
+```
+
+#c
+```{r}
+set.seed(1)
+svmRadial = tune(svm, Outcome ~ ., data = diabetes, kernel = "radial", ranges = list(cost = c(0.1,1,10,100,1000), gamma = c(1,2,3)))
+
+#best model
+svmBestRadial = svmRadial$best.model
+table(predicted = predict(svmBestRadial, diabetes), true = diabetes$Outcome)
+#summaries
+summary(svmRadial)
+summary(svmBestRadial)
+```
